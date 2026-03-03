@@ -1,32 +1,25 @@
 {
   "name": "meter-management",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Advanced Meter Management System with IndexedDB caching and load balancing",
-  "author": "PBS Team",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "analyze": "cross-env ANALYZE=true next build"
+    "lint": "next lint"
   },
   "dependencies": {
-    "next": "^14.2.35",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "date-fns": "^3.3.1",
-    "react-icons": "^5.0.1"
+    "critters": "^0.0.23",
+    "date-fns": "^3.0.0",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1",
-    "@next/bundle-analyzer": "^14.2.35",
-    "cross-env": "^7.0.3"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0"
   }
 }

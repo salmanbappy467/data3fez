@@ -4,15 +4,7 @@ import { useState, useEffect } from 'react'
 import { FiX } from 'react-icons/fi'
 import { sheetsApi } from '../lib/api'
 import { storage } from '../lib/storage'
-import { 
-  STATUS_OPTIONS, 
-  MF_OPTIONS, 
-  CLASS_OPTIONS, 
-  ITEM_OPTIONS, 
-  REMARKS_OPTIONS, 
-  CONDITION_OPTIONS,
-  HEADER_COLUMNS 
-} from '../lib/constants'
+import { STATUS_OPTIONS, MF_OPTIONS, CLASS_OPTIONS, ITEM_OPTIONS, REMARKS_OPTIONS, CONDITION_OPTIONS, HEADER_COLUMNS } from '../lib/constants'
 import { format } from 'date-fns'
 
 export default function AddEntryModal({ onClose }) {
@@ -28,20 +20,27 @@ export default function AddEntryModal({ onClose }) {
     class: '200',
     item: 'J-3',
     remarks: '',
+    remarksCustom: '',
     padlockSealNo: '',
     padlockSealConditon: '',
+    padlockCustom: '',
     sealInfo: '',
+    sealInfoCustom: '',
     leadSealConditon: '',
+    leadCustom: '',
     glasscover: '',
+    glassCustom: '',
     testCliper: '',
+    clipperCustom: '',
     linemanName: '',
     CMO: '',
   })
   const [saving, setSaving] = useState(false)
-  const [showOtherRemarks, setShowOtherRemarks] = useState(false)
+  const [linemanSuggestions, setLinemanSuggestions] = useState([])
 
   useEffect(() => {
     loadLastSlNo()
+    loadLinemanHistory()
   }, [])
 
   const loadLastSlNo = async () => {
@@ -64,6 +63,20 @@ export default function AddEntryModal({ onClose }) {
     }
   }
 
+  const loadLinemanHistory = async () => {
+    try {
+      const userData = storage.getUserData()
+      const sheetId = userData?.app_json?.data3fez?.sheetId
+      if (!sheetId) return
+
+      const data = await sheetsApi.readData(sheetId)
+      const names = [...new Set(data.slice(1).map(row => row[17]).filter(Boolean))]
+      setLinemanSuggestions(names)
+    } catch (error) {
+      console.error('Load Lineman Error:', error)
+    }
+  }
+
   const handleChange = (key, value) => {
     if (key === 'acountNo') {
       value = value.replace(/\D/g, '').slice(0, 7)
@@ -71,14 +84,14 @@ export default function AddEntryModal({ onClose }) {
         value = value.slice(0, 3) + '-' + value.slice(3)
       }
     }
-
-    if (key === 'remarks' && value === 'other') {
-      setShowOtherRemarks(true)
-      setFormData(prev => ({ ...prev, [key]: '' }))
-      return
-    }
-
     setFormData(prev => ({ ...prev, [key]: value }))
+  }
+
+  const getFinalValue = (mainKey, customKey) => {
+    if (formData[mainKey] === 'other') {
+      return formData[customKey]
+    }
+    return formData[mainKey]
   }
 
   const handleSubmit = async () => {
@@ -92,13 +105,23 @@ export default function AddEntryModal({ onClose }) {
         return
       }
 
-      const rowData = HEADER_COLUMNS.map(col => formData[col] || '')
+      const finalData = {
+        ...formData,
+        remarks: getFinalValue('remarks', 'remarksCustom'),
+        padlockSealConditon: getFinalValue('padlockSealConditon', 'padlockCustom'),
+        sealInfo: getFinalValue('sealInfo', 'sealInfoCustom'),
+        leadSealConditon: getFinalValue('leadSealConditon', 'leadCustom'),
+        glasscover: getFinalValue('glasscover', 'glassCustom'),
+        testCliper: getFinalValue('testCliper', 'clipperCustom'),
+      }
 
+      const rowData = HEADER_COLUMNS.map(col => finalData[col] || '')
       await sheetsApi.addRow(sheetId, rowData)
-      alert('✅ Entry added successfully')
+      
+      alert('Entry added successfully')
       onClose()
     } catch (error) {
-      alert('❌ Failed to add entry: ' + error.message)
+      alert('Failed to add entry: ' + error.message)
     } finally {
       setSaving(false)
     }
@@ -107,202 +130,140 @@ export default function AddEntryModal({ onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-          <h2 className="text-2xl font-bold">➕ Add New Entry</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-all">
-            <FiX size={28} />
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-500 to-green-600 text-white">
+          <h2 className="text-xl font-bold">Add New Entry</h2>
+          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
+            <FiX size={24} />
           </button>
         </div>
 
-        <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Serial No */}
-            <InputField 
-              label="Serial No (Auto)" 
-              value={formData.slNo} 
-              onChange={(v) => handleChange('slNo', v)} 
-              disabled 
-            />
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Basic Info */}
+            <InputField label="Serial No" value={formData.slNo} onChange={(v) => handleChange('slNo', v)} disabled />
+            <InputField label="Data Sheet No (Optional)" value={formData.dataSheetNo} onChange={(v) => handleChange('dataSheetNo', v)} maxLength={5} />
             
-            {/* Data Sheet No */}
-            <InputField 
-              label="Data Sheet No (Optional)" 
-              value={formData.dataSheetNo} 
-              onChange={(v) => handleChange('dataSheetNo', v)} 
-              maxLength={5}
-              placeholder="12345"
-            />
+            <SelectField label="Status" value={formData.status} onChange={(v) => handleChange('status', v)} options={STATUS_OPTIONS} />
+            <InputField label="Date" value={formData.date} onChange={(v) => handleChange('date', v)} placeholder="dd/mm/yyyy" />
             
-            {/* Status */}
-            <SelectField 
-              label="Status" 
-              value={formData.status} 
-              onChange={(v) => handleChange('status', v)} 
-              options={STATUS_OPTIONS} 
-            />
+            {/* Meter Info */}
+            <InputField label="Account No" value={formData.acountNo} onChange={(v) => handleChange('acountNo', v)} placeholder="xxx-xxxx" />
+            <InputField label="Meter No" value={formData.meterNo} onChange={(v) => handleChange('meterNo', v)} maxLength={18} />
             
-            {/* Date */}
-            <InputField 
-              label="Date" 
-              value={formData.date} 
-              onChange={(v) => handleChange('date', v)} 
-              placeholder="dd/mm/yyyy"
-            />
+            <InputField label="kWh Reading" type="number" step="0.01" value={formData.kwhReading} onChange={(v) => handleChange('kwhReading', v)} />
+            <SelectField label="Manufacturer" value={formData.mF} onChange={(v) => handleChange('mF', v)} options={MF_OPTIONS} />
             
-            {/* Account No */}
-            <InputField 
-              label="Account No (xxx-xxxx)" 
-              value={formData.acountNo} 
-              onChange={(v) => handleChange('acountNo', v)} 
-              placeholder="123-4567"
-            />
-            
-            {/* Meter No */}
-            <InputField 
-              label="Meter No (18 digits)" 
-              value={formData.meterNo} 
-              onChange={(v) => handleChange('meterNo', v)} 
-              maxLength={18}
-              placeholder="123456789012345678"
-            />
-            
-            {/* kWh Reading */}
-            <InputField 
-              label="kWh Reading" 
-              type="number" 
-              step="0.01" 
-              value={formData.kwhReading} 
-              onChange={(v) => handleChange('kwhReading', v)}
-              placeholder="1234.56"
-            />
-            
-            {/* Manufacturer */}
-            <SelectField 
-              label="Manufacturer" 
-              value={formData.mF} 
-              onChange={(v) => handleChange('mF', v)} 
-              options={MF_OPTIONS} 
-            />
-            
-            {/* Class */}
-            <SelectField 
-              label="Class" 
-              value={formData.class} 
-              onChange={(v) => handleChange('class', v)} 
-              options={CLASS_OPTIONS} 
-            />
-            
-            {/* Item */}
-            <SelectField 
-              label="Item" 
-              value={formData.item} 
-              onChange={(v) => handleChange('item', v)} 
-              options={ITEM_OPTIONS} 
-            />
-            
-            {/* Remarks */}
+            <SelectField label="Class" value={formData.class} onChange={(v) => handleChange('class', v)} options={CLASS_OPTIONS} />
+            <SelectField label="Item" value={formData.item} onChange={(v) => handleChange('item', v)} options={ITEM_OPTIONS} />
+
+            {/* Remarks with Custom Option */}
             <div className="md:col-span-2">
-              {!showOtherRemarks ? (
-                <SelectField 
-                  label="Remarks" 
-                  value={formData.remarks} 
-                  onChange={(v) => handleChange('remarks', v)} 
-                  options={REMARKS_OPTIONS} 
-                />
-              ) : (
-                <InputField 
-                  label="Remarks (Manual)" 
-                  value={formData.remarks} 
-                  onChange={(v) => handleChange('remarks', v)}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+              <select
+                value={formData.remarks}
+                onChange={(e) => handleChange('remarks', e.target.value)}
+                className="input-field mb-2"
+              >
+                <option value="">Select...</option>
+                {REMARKS_OPTIONS.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              {formData.remarks === 'other' && (
+                <input
+                  type="text"
                   placeholder="Enter custom remark"
+                  value={formData.remarksCustom}
+                  onChange={(e) => handleChange('remarksCustom', e.target.value)}
+                  className="input-field"
                 />
               )}
             </div>
-            
-            {/* Padlock Seal No */}
-            <TextAreaField 
-              label="Padlock Seal No (সীল-১, সীল-২)" 
-              value={formData.padlockSealNo} 
-              onChange={(v) => handleChange('padlockSealNo', v)}
-              placeholder="সীল-১&#10;সীল-২"
+
+            {/* Seal Numbers */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Padlock Seal No</label>
+              <textarea
+                value={formData.padlockSealNo}
+                onChange={(e) => handleChange('padlockSealNo', e.target.value)}
+                placeholder="সীল-১&#10;সীল-২"
+                className="input-field"
+                rows={2}
+              />
+            </div>
+
+            {/* Condition Fields with Custom Option */}
+            <ConditionalField
+              label="Padlock Seal Condition"
+              value={formData.padlockSealConditon}
+              customValue={formData.padlockCustom}
+              onChange={(v) => handleChange('padlockSealConditon', v)}
+              onCustomChange={(v) => handleChange('padlockCustom', v)}
             />
-            
-            {/* Padlock Condition */}
-            <SelectField 
-              label="Padlock Condition" 
-              value={formData.padlockSealConditon} 
-              onChange={(v) => handleChange('padlockSealConditon', v)} 
-              options={CONDITION_OPTIONS} 
+
+            <ConditionalField
+              label="Seal Info"
+              value={formData.sealInfo}
+              customValue={formData.sealInfoCustom}
+              onChange={(v) => handleChange('sealInfo', v)}
+              onCustomChange={(v) => handleChange('sealInfoCustom', v)}
             />
-            
-            {/* Seal Info */}
-            <SelectField 
-              label="Seal Info" 
-              value={formData.sealInfo} 
-              onChange={(v) => handleChange('sealInfo', v)} 
-              options={CONDITION_OPTIONS} 
+
+            <ConditionalField
+              label="Lead Seal Condition"
+              value={formData.leadSealConditon}
+              customValue={formData.leadCustom}
+              onChange={(v) => handleChange('leadSealConditon', v)}
+              onCustomChange={(v) => handleChange('leadCustom', v)}
             />
-            
-            {/* Lead Seal Condition */}
-            <SelectField 
-              label="Lead Seal Condition" 
-              value={formData.leadSealConditon} 
-              onChange={(v) => handleChange('leadSealConditon', v)} 
-              options={CONDITION_OPTIONS} 
+
+            <ConditionalField
+              label="Glass Cover"
+              value={formData.glasscover}
+              customValue={formData.glassCustom}
+              onChange={(v) => handleChange('glasscover', v)}
+              onCustomChange={(v) => handleChange('glassCustom', v)}
             />
-            
-            {/* Glass Cover */}
-            <SelectField 
-              label="Glass Cover" 
-              value={formData.glasscover} 
-              onChange={(v) => handleChange('glasscover', v)} 
-              options={CONDITION_OPTIONS} 
+
+            <ConditionalField
+              label="Test Clipper"
+              value={formData.testCliper}
+              customValue={formData.clipperCustom}
+              onChange={(v) => handleChange('testCliper', v)}
+              onCustomChange={(v) => handleChange('clipperCustom', v)}
             />
-            
-            {/* Test Clipper */}
-            <SelectField 
-              label="Test Clipper" 
-              value={formData.testCliper} 
-              onChange={(v) => handleChange('testCliper', v)} 
-              options={CONDITION_OPTIONS} 
-            />
-            
-            {/* Lineman Name */}
-            <InputField 
-              label="Lineman Name" 
-              value={formData.linemanName} 
-              onChange={(v) => handleChange('linemanName', v)} 
-              maxLength={20}
-              placeholder="Enter name"
-            />
-            
-            {/* CMO No */}
-            <InputField 
-              label="CMO No" 
-              value={formData.CMO} 
-              onChange={(v) => handleChange('CMO', v)} 
-              maxLength={10}
-              placeholder="1234567890"
-            />
+
+            {/* Personnel Info */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lineman Name</label>
+              <input
+                type="text"
+                list="lineman-suggestions"
+                value={formData.linemanName}
+                onChange={(e) => handleChange('linemanName', e.target.value)}
+                className="input-field"
+                maxLength={20}
+              />
+              <datalist id="lineman-suggestions">
+                {linemanSuggestions.map((name, idx) => (
+                  <option key={idx} value={name} />
+                ))}
+              </datalist>
+            </div>
+
+            <InputField label="CMO No" value={formData.CMO} onChange={(v) => handleChange('CMO', v)} maxLength={10} />
           </div>
         </div>
 
-        <div className="p-6 border-t bg-gray-50 flex justify-end gap-4">
-          <button 
-            onClick={onClose} 
-            className="px-8 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-100 font-semibold transition-all"
-          >
+        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+          <button onClick={onClose} className="px-6 py-2 border rounded-lg hover:bg-gray-100">
             Cancel
           </button>
-          <button 
-            onClick={handleSubmit} 
-            disabled={saving} 
-            className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:transform-none"
-          >
-            {saving ? '💾 Saving...' : '✅ Add Entry'}
+          <button onClick={handleSubmit} disabled={saving} className="btn-primary">
+            {saving ? 'Saving...' : 'Add Entry'}
           </button>
         </div>
       </div>
@@ -314,13 +275,13 @@ export default function AddEntryModal({ onClose }) {
 function InputField({ label, value, onChange, type = 'text', disabled = false, ...props }) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <input
         type={type}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="input-field disabled:bg-gray-100"
         {...props}
       />
     </div>
@@ -330,12 +291,8 @@ function InputField({ label, value, onChange, type = 'text', disabled = false, .
 function SelectField({ label, value, onChange, options }) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-      <select 
-        value={value || ''} 
-        onChange={(e) => onChange(e.target.value)} 
-        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-      >
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)} className="input-field">
         <option value="">Select...</option>
         {options.map(opt => (
           <option key={opt} value={opt}>{opt}</option>
@@ -345,17 +302,25 @@ function SelectField({ label, value, onChange, options }) {
   )
 }
 
-function TextAreaField({ label, value, onChange, ...props }) {
+function ConditionalField({ label, value, customValue, onChange, onCustomChange }) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-      <textarea
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-        rows={3}
-        {...props}
-      />
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)} className="input-field mb-2">
+        <option value="">Select...</option>
+        {CONDITION_OPTIONS.map(opt => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+      {value === 'other' && (
+        <input
+          type="text"
+          placeholder="Enter custom value"
+          value={customValue}
+          onChange={(e) => onCustomChange(e.target.value)}
+          className="input-field"
+        />
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FiArrowLeft, FiSave, FiHome, FiSettings as FiSettingsIcon, FiPrinter, FiDatabase, FiTrash2 } from 'react-icons/fi'
+import { FiArrowLeft, FiSave, FiHome, FiSettings as FiSettingsIcon, FiPrinter } from 'react-icons/fi'
 import { useRouter } from 'next/navigation'
 import { pbsnetApi, sheetsApi } from '../lib/api'
 import { storage } from '../lib/storage'
@@ -17,8 +17,6 @@ export default function SettingsPage() {
   })
   const [saving, setSaving] = useState(false)
   const [userData, setUserData] = useState(null)
-  const [cacheStats, setCacheStats] = useState(null)
-  const [loadingStats, setLoadingStats] = useState(false)
 
   useEffect(() => {
     const cached = storage.getUserData()
@@ -27,34 +25,7 @@ export default function SettingsPage() {
     if (cached?.app_json?.data3fez?.sheetId) {
       setSheetUrl(`https://docs.google.com/spreadsheets/d/${cached.app_json.data3fez.sheetId}`)
     }
-
-    // Load cache stats
-    loadCacheStats()
   }, [])
-
-  const loadCacheStats = async () => {
-    setLoadingStats(true)
-    try {
-      const stats = await sheetsApi.getCacheStats()
-      setCacheStats(stats)
-    } catch (error) {
-      console.error('Failed to load cache stats:', error)
-    } finally {
-      setLoadingStats(false)
-    }
-  }
-
-  const handleClearCache = async () => {
-    if (!confirm('⚠️ Are you sure you want to clear all cached data? This will force reload from Google Sheets.')) return
-
-    try {
-      await sheetsApi.clearAllCache()
-      alert('✅ Cache cleared successfully!')
-      loadCacheStats()
-    } catch (error) {
-      alert('❌ Failed to clear cache: ' + error.message)
-    }
-  }
 
   const handleSheetSetup = async () => {
     try {
@@ -78,9 +49,6 @@ export default function SettingsPage() {
       setUserData(updatedUserData)
       
       alert('✅ Google Sheet setup successfully!')
-      
-      // Clear first login flag
-      storage.clearFirstLogin()
     } catch (error) {
       alert('❌ Setup failed: ' + error.message)
     } finally {
@@ -123,15 +91,15 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       {/* Header */}
-      <div className="bg-white shadow-md sticky top-0 z-10 border-b-2 border-blue-100">
+      <div className="bg-white shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push('/')}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               <FiArrowLeft size={24} />
-              <span>Back to Home</span>
+              <span className="font-medium">Back to Home</span>
             </button>
             
             <div className="flex items-center gap-3">
@@ -163,12 +131,6 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('print')}
               icon={<FiPrinter size={20} />}
               label="Print Config"
-            />
-            <TabButton
-              active={activeTab === 'cache'}
-              onClick={() => setActiveTab('cache')}
-              icon={<FiDatabase size={20} />}
-              label="Cache Manager"
             />
           </nav>
         </div>
@@ -272,7 +234,6 @@ export default function SettingsPage() {
                   <li>✓ Sheet must be publicly accessible</li>
                   <li>✓ Tab "data3fez" will be auto-created</li>
                   <li>✓ Headers will be added automatically</li>
-                  <li>✓ Multiple Google Scripts for load balancing</li>
                 </ul>
               </div>
             </div>
@@ -281,6 +242,7 @@ export default function SettingsPage() {
           {/* PRINT SETUP TAB */}
           {activeTab === 'print' && (
             <div className="space-y-6 animate-fade-in">
+              {/* Header Settings */}
               <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
                 <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                   📄 Page Header
@@ -309,6 +271,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              {/* Footer Settings */}
               <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
                 <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                   🔖 Page Footer
@@ -337,11 +300,12 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              {/* Column Labels */}
               <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
                 <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                   📊 Table Column Labels
                 </h4>
-                <div className="grid md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
+                <div className="grid md:grid-cols-2 gap-4">
                   {Object.entries(printSettings.printColumns).map(([key, label]) => (
                     <ModernInput
                       key={key}
@@ -353,6 +317,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              {/* Save Button */}
               <button
                 onClick={handlePrintSettingsSave}
                 disabled={saving}
@@ -361,69 +326,6 @@ export default function SettingsPage() {
                 <FiSave size={24} />
                 {saving ? 'Saving...' : 'Save Print Settings'}
               </button>
-            </div>
-          )}
-
-          {/* CACHE MANAGER TAB */}
-          {activeTab === 'cache' && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <FiDatabase size={28} className="text-blue-600" />
-                  IndexedDB Cache Statistics
-                </h3>
-
-                {loadingStats ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading cache statistics...</p>
-                  </div>
-                ) : cacheStats ? (
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <StatCard
-                      icon="📦"
-                      label="Total Records"
-                      value={cacheStats.totalRecords}
-                      color="blue"
-                    />
-                    <StatCard
-                      icon="💾"
-                      label="Cache Size"
-                      value={cacheStats.totalSize}
-                      color="green"
-                    />
-                    <StatCard
-                      icon="🕒"
-                      label="Oldest Cache"
-                      value={cacheStats.oldestCache}
-                      color="purple"
-                    />
-                  </div>
-                ) : (
-                  <p className="text-gray-600 text-center py-8">No cache data available</p>
-                )}
-
-                <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                  <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    <span className="text-xl">ℹ️</span>
-                    About Caching
-                  </h4>
-                  <ul className="text-sm text-gray-700 space-y-2">
-                    <li>✓ Data is cached in your browser's IndexedDB for faster loading</li>
-                    <li>✓ Cache expires automatically after 30 minutes</li>
-                    <li>✓ No data is sent to external servers</li>
-                    <li>✓ Clear cache to force reload from Google Sheets</li>
-                  </ul>
-                </div>
-
-                <button
-                  onClick={handleClearCache}
-                  className="w-full mt-6 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3"
-                >
-                  <FiTrash2 size={20} />
-                  Clear All Cache
-                </button>
-              </div>
             </div>
           )}
         </div>
@@ -472,24 +374,6 @@ function ModernInput({ label, value, onChange, placeholder = '' }) {
         placeholder={placeholder}
         className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
       />
-    </div>
-  )
-}
-
-function StatCard({ icon, label, value, color }) {
-  const colorClasses = {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    purple: 'from-purple-500 to-purple-600',
-  }
-
-  return (
-    <div className="bg-white rounded-xl p-6 border-2 border-gray-200 hover:shadow-lg transition-all">
-      <div className={`w-14 h-14 bg-gradient-to-br ${colorClasses[color]} rounded-xl flex items-center justify-center text-3xl mb-4`}>
-        {icon}
-      </div>
-      <p className="text-sm font-medium text-gray-600 mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
     </div>
   )
 }
