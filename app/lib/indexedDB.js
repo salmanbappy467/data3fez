@@ -50,15 +50,8 @@ class IndexedDBCache {
             return
           }
 
-          // Check if cache is older than 30 minutes
-          const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000)
-          if (result.timestamp < thirtyMinutesAgo) {
-            // Delete old cache
-            this.delete(sheetId).catch(console.error)
-            resolve(null)
-            return
-          }
-
+          // ❌ আগের ৩০ মিনিটের অটো-ডিলিট লজিক বাদ দেওয়া হয়েছে
+          // এখন ডাটা সরাসরি রিটার্ন করবে, পুরনো হলেও
           resolve(result.data)
         }
       })

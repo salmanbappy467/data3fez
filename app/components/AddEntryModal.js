@@ -102,6 +102,7 @@ export default function AddEntryModal({ onClose }) {
 
       if (!sheetId) {
         alert('Please setup Google Sheet first')
+        setSaving(false) // Reset saving state
         return
       }
 
@@ -116,13 +117,18 @@ export default function AddEntryModal({ onClose }) {
       }
 
       const rowData = HEADER_COLUMNS.map(col => finalData[col] || '')
-      await sheetsApi.addRow(sheetId, rowData)
       
-      alert('Entry added successfully')
+      // ✅ ফাস্ট সেভ: 'await' সরানো হয়েছে এবং ব্যাকগ্রাউন্ডে পাঠানো হচ্ছে
+      sheetsApi.addRow(sheetId, rowData).catch(err => {
+        console.error('Background sync failed:', err)
+        alert('Sync Failed: ' + err.message) // অপশনাল: ফেইল হলে ইউজারকে জানানো
+      })
+      
+      // IndexedDB (Local) এ সেভ হয়ে গেছে, তাই সাথে সাথেই বন্ধ করে দিচ্ছি
       onClose()
+      
     } catch (error) {
       alert('Failed to add entry: ' + error.message)
-    } finally {
       setSaving(false)
     }
   }

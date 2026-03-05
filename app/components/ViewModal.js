@@ -1,10 +1,11 @@
 'use client'
 
-import { FiX } from 'react-icons/fi'
+import { FiX, FiEdit2, FiTrash2 } from 'react-icons/fi'
 
-export default function ViewModal({ data, onClose }) {
+export default function ViewModal({ data, onClose, onEdit, onDelete }) {
   if (!data) return null
 
+  // All fields configuration
   const fields = [
     { key: 'slNo', label: 'Serial No' },
     { key: 'dataSheetNo', label: 'Data Sheet No' },
@@ -38,27 +39,24 @@ export default function ViewModal({ data, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <h2 className="text-xl font-bold">Meter Details</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          >
+          <h2 className="text-xl font-bold">Meter Details #{data.slNo}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
             <FiX size={24} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="p-6 overflow-y-auto flex-1">
           <div className="grid md:grid-cols-2 gap-4">
             {fields.map(({ key, label }) => (
-              <div key={key} className="border-b pb-3">
-                <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
-                <p className="text-gray-900 break-words">
+              <div key={key} className={`border-b pb-3 ${key === 'remarks' || key === 'note' || key === 'googledriveLink' ? 'md:col-span-2' : ''}`}>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+                <p className={`text-gray-900 break-words ${key === 'meterNo' ? 'font-mono' : ''}`}>
                   {data[key] || '-'}
                 </p>
               </div>
@@ -66,10 +64,20 @@ export default function ViewModal({ data, onClose }) {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t bg-gray-50 flex justify-end">
-          <button onClick={onClose} className="btn-primary">
-            Close
+        {/* Footer Actions */}
+        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+          <button 
+            onClick={onDelete}
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all font-medium border border-red-100"
+          >
+            <FiTrash2 /> Delete
+          </button>
+          
+          <button 
+            onClick={onEdit}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm"
+          >
+            <FiEdit2 /> Edit Entry
           </button>
         </div>
       </div>
