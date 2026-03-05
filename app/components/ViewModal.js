@@ -1,84 +1,119 @@
 'use client'
 
-import { FiX, FiEdit2, FiTrash2 } from 'react-icons/fi'
+import { FiX, FiPrinter } from 'react-icons/fi'
 
-export default function ViewModal({ data, onClose, onEdit, onDelete }) {
+export default function ViewModal({ data, onClose }) {
   if (!data) return null
 
-  // All fields configuration
-  const fields = [
-    { key: 'slNo', label: 'Serial No' },
-    { key: 'dataSheetNo', label: 'Data Sheet No' },
-    { key: 'status', label: 'Status' },
-    { key: 'date', label: 'Date' },
-    { key: 'acountNo', label: 'Account No' },
-    { key: 'meterNo', label: 'Meter No' },
-    { key: 'kwhReading', label: 'kWh Reading' },
-    { key: 'mF', label: 'Manufacturer' },
-    { key: 'class', label: 'Class' },
-    { key: 'item', label: 'Item' },
-    { key: 'remarks', label: 'Remarks' },
-    { key: 'padlockSealNo', label: 'Padlock Seal No' },
-    { key: 'padlockSealConditon', label: 'Padlock Condition' },
-    { key: 'sealInfo', label: 'Seal Info' },
-    { key: 'leadSealConditon', label: 'Lead Seal Condition' },
-    { key: 'glasscover', label: 'Glass Cover' },
-    { key: 'testCliper', label: 'Test Clipper' },
-    { key: 'linemanName', label: 'Lineman Name' },
-    { key: 'CMO', label: 'CMO No' },
-    { key: 'sendMeterDate', label: 'Send Meter Date' },
-    { key: 'reciveMeterDate', label: 'Receive Meter Date' },
-    { key: 'rebTestfull', label: 'REB Test Full' },
-    { key: 'rebtestData', label: 'REB Test Data' },
-    { key: 'testsubmitDate', label: 'Test Submit Date' },
-    { key: 'googledriveLink', label: 'Google Drive Link' },
-    { key: 'reIsudate', label: 'Re-Issue Date' },
-    { key: 'note', label: 'Note' },
-  ]
+  // ✅ শুধু Date দেখানোর জন্য ফাংশন (Time সম্পূর্ণ বাদ)
+  const formatDate = (val) => {
+    if (!val) return '-'
+    const str = String(val).trim()
+    
+    // যদি আগে থেকেই dd/mm/yyyy থাকে
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str
+
+    try {
+        const date = new Date(str)
+        if (!isNaN(date)) {
+            const dd = String(date.getDate()).padStart(2, '0')
+            const mm = String(date.getMonth() + 1).padStart(2, '0')
+            const yyyy = date.getFullYear()
+            return `${dd}/${mm}/${yyyy}`
+        }
+    } catch (e) {}
+    
+    // Fallback: T অথবা Space এর আগের অংশ নেওয়া
+    return str.split('T')[0].split(' ')[0]
+  }
+
+  // ফিল্ড দেখানোর হেল্পার
+  const renderField = (label, value, isDate = false) => (
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+      <p className="text-xs font-semibold text-gray-500 mb-1">{label}</p>
+      <p className="text-sm font-medium text-gray-900 break-words">
+        {isDate ? formatDate(value) : (value || '-')}
+      </p>
+    </div>
+  )
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <h2 className="text-xl font-bold">Meter Details #{data.slNo}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
-            <FiX size={24} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1">
-          <div className="grid md:grid-cols-2 gap-4">
-            {fields.map(({ key, label }) => (
-              <div key={key} className={`border-b pb-3 ${key === 'remarks' || key === 'note' || key === 'googledriveLink' ? 'md:col-span-2' : ''}`}>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-                <p className={`text-gray-900 break-words ${key === 'meterNo' ? 'font-mono' : ''}`}>
-                  {data[key] || '-'}
-                </p>
-              </div>
-            ))}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+          <h2 className="text-xl font-bold">Meter Details: {data.meterNo}</h2>
+          <div className="flex gap-2">
+            <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-lg" title="Print Details">
+              <FiPrinter size={20} />
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
+              <FiX size={20} />
+            </button>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
-          <button 
-            onClick={onDelete}
-            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all font-medium border border-red-100"
-          >
-            <FiTrash2 /> Delete
-          </button>
-          
-          <button 
-            onClick={onEdit}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm"
-          >
-            <FiEdit2 /> Edit Entry
-          </button>
+        <div className="p-6 overflow-y-auto print:p-0">
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">Basic Info</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {renderField('SL No', data.slNo)}
+                {renderField('Data Sheet No', data.dataSheetNo || data.dataNo)}
+                {/* ✅ isDate=true ব্যবহার করা হয়েছে */}
+                {renderField('Date', data.date, true)}
+                {renderField('Account No', data.acountNo)}
+                {renderField('Meter No', data.meterNo)}
+                {renderField('kWh Reading', data.kwhReading)}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">Meter Details</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {renderField('Manufacturer', data.mF)}
+                {renderField('Class', data.class)}
+                {renderField('Item', data.item)}
+                {renderField('Status', data.status)}
+                {renderField('Remarks', data.remarks)}
+                {renderField('Note', data.note)}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">Seals & Conditions</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {renderField('Padlock Seal No', data.padlockSealNo)}
+                {renderField('Padlock Condition', data.padlockSealConditon)}
+                {renderField('Seal Info', data.sealInfo)}
+                {renderField('Lead Seal Condition', data.leadSealConditon)}
+                {renderField('Glass Cover', data.glasscover)}
+                {renderField('Test Cliper', data.testCliper)}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-gray-800 mb-3 border-b pb-2">Tracking & Testing</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {renderField('Lineman Name', data.linemanName)}
+                {renderField('CMO', data.CMO)}
+                {/* ✅ isDate=true ব্যবহার করা হয়েছে */}
+                {renderField('Send Meter Date', data.sendMeterDate, true)}
+                {renderField('Receive Meter Date', data.reciveMeterDate, true)}
+                {renderField('Test Submit Date', data.testsubmitDate, true)}
+                {renderField('Re-Issue Date', data.reIsudate, true)}
+                {renderField('REB Test Full', data.rebTestfull)}
+                {renderField('REB Test Data', data.rebtestData)}
+              </div>
+            </div>
+
+            {data.googledriveLink && (
+              <div className="mt-4 bg-blue-50 p-3 rounded-lg border border-blue-100 inline-block">
+                <a href={data.googledriveLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-2">
+                  🔗 View Google Drive Image / Link
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

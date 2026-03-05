@@ -2,14 +2,12 @@ import { API_ENDPOINTS, HEADER_COLUMNS } from './constants'
 import { storage } from './storage'
 import dbCache from './indexedDB'
 
-// Helper to broadcast events
 const broadcast = (event) => {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(event))
   }
 }
 
-// Load Balancer Class
 class GoogleScriptLoadBalancer {
   constructor() {
     this.scripts = [
@@ -48,7 +46,6 @@ class GoogleScriptLoadBalancer {
 
 const loadBalancer = new GoogleScriptLoadBalancer()
 
-// ✅ PBSNet Admin API Integration (Restored)
 export const pbsnetApi = {
   async authenticate(apiKey) {
     try {
@@ -106,7 +103,6 @@ export const pbsnetApi = {
   }
 }
 
-// ✅ Google Sheets API
 export const sheetsApi = {
   async makeRequest(payload, maxRetries = 3) {
     let lastError = null
@@ -176,12 +172,12 @@ export const sheetsApi = {
   async updateRow(sheetId, rowIndex, rowData, sheetName = 'data3fez') {
     broadcast('sync-start')
     
-    // ১. লোকাল ডাটাবেস আপডেট (Optimistic)
+    // ✅ ফিক্স: rowIndex - 1 করা হয়েছে যাতে সঠিক রো আপডেট হয়
     if (typeof window !== 'undefined') {
       try {
         const currentData = await dbCache.get(sheetId)
         if (currentData) {
-          const arrayIndex = rowIndex - 2; 
+          const arrayIndex = rowIndex - 1; 
           
           if (arrayIndex >= 0 && currentData[arrayIndex]) {
             const updatedRow = [...currentData[arrayIndex]]
@@ -195,7 +191,6 @@ export const sheetsApi = {
             
             currentData[arrayIndex] = updatedRow
             await dbCache.set(sheetId, currentData)
-            console.log('⚡ Optimistic Row Update Success')
             broadcast('data-change') 
           }
         }
@@ -204,7 +199,6 @@ export const sheetsApi = {
       }
     }
 
-    // ২. ব্যাকগ্রাউন্ডে Google Sheet আপডেট
     const updates = []
     Object.keys(rowData).forEach((key) => {
       const colIndex = HEADER_COLUMNS.indexOf(key)
@@ -236,10 +230,10 @@ export const sheetsApi = {
   async deleteRow(sheetId, row, sheetName = 'data3fez') {
     broadcast('sync-start')
     try {
-      // Optimistic Delete
+      // ✅ ফিক্স: row - 1 করা হয়েছে যাতে সঠিক রো ডিলিট হয়
       if (typeof window !== 'undefined') {
         const currentData = (await dbCache.get(sheetId)) || []
-        const arrayIndex = row - 2; 
+        const arrayIndex = row - 1; 
         if (arrayIndex >= 0) {
           const newData = [...currentData]
           newData.splice(arrayIndex, 1)
@@ -271,7 +265,7 @@ export const sheetsApi = {
     } catch (error) {
       if (error.message.includes('already exists') || error.message.includes('duplicate')) {
         try {
-          const data = await this.readData(sheetId, 'data3fez', true) // force fetch
+          const data = await this.readData(sheetId, 'data3fez', true) 
           if (data.length === 0 || data[0][0] !== 'slNo') {
             for (let i = 0; i < HEADER_COLUMNS.length; i++) {
               await this.updateCell(sheetId, 1, i + 1, HEADER_COLUMNS[i], 'data3fez')

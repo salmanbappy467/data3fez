@@ -89,6 +89,13 @@ export const storage = {
     }
   },
 
+  clearAll: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.clear()
+      sessionStorage.clear() 
+    }
+  },
+
   savePrintSettings: (settings) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('print_settings', JSON.stringify(settings))

@@ -5,7 +5,6 @@ import { FiEye, FiSearch } from 'react-icons/fi'
 import { sheetsApi } from '../lib/api'
 import { storage } from '../lib/storage'
 import { HEADER_COLUMNS } from '../lib/constants'
-import { format, parseISO } from 'date-fns'
 
 export default function DataTable({ refreshTrigger, onView }) {
   const [data, setData] = useState([])
@@ -44,16 +43,26 @@ export default function DataTable({ refreshTrigger, onView }) {
     }
   }
 
+  // ✅ ডেট থেকে পুরোপুরি টাইম বাদ দিয়ে শুধু dd/mm/yyyy দেখানোর লজিক
   const formatDate = (dateString) => {
     if (!dateString) return ''
+    const str = String(dateString).trim()
+    
+    // যদি আগে থেকেই dd/mm/yyyy থাকে
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str
+
     try {
-        if (dateString.includes('T')) {
-            return format(parseISO(dateString), 'dd/MM/yyyy')
+        const date = new Date(str)
+        if (!isNaN(date)) {
+            const dd = String(date.getDate()).padStart(2, '0')
+            const mm = String(date.getMonth() + 1).padStart(2, '0')
+            const yyyy = date.getFullYear()
+            return `${dd}/${mm}/${yyyy}`
         }
-        return dateString;
-    } catch (e) {
-        return dateString
-    }
+    } catch (e) {}
+    
+    // Fallback: T এর আগের অংশ নেওয়া
+    return str.split('T')[0]
   }
 
   const filteredData = data.filter(item => 
@@ -82,6 +91,7 @@ export default function DataTable({ refreshTrigger, onView }) {
           <thead className="bg-gray-50 text-gray-500 font-medium border-b">
             <tr>
               <th className="px-4 py-3">SL</th>
+              <th className="px-4 py-3 text-blue-600">Data Sheet No</th>
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Account No</th>
               <th className="px-4 py-3">Meter No</th>
@@ -93,6 +103,8 @@ export default function DataTable({ refreshTrigger, onView }) {
             {filteredData.map((row) => (
               <tr key={row.id} className="hover:bg-blue-50/50 transition-colors">
                 <td className="px-4 py-3 font-medium text-gray-900">{row.slNo}</td>
+                <td className="px-4 py-3 font-bold text-blue-600 bg-blue-50/30">{row.dataSheetNo}</td>
+                {/* ✅ Format Date অ্যাপ্লাই করা হয়েছে */}
                 <td className="px-4 py-3 text-gray-600">{formatDate(row.date)}</td>
                 <td className="px-4 py-3 text-gray-600">{row.acountNo}</td>
                 <td className="px-4 py-3 text-gray-600 font-mono">{row.meterNo}</td>
@@ -117,10 +129,9 @@ export default function DataTable({ refreshTrigger, onView }) {
                 </td>
               </tr>
             ))}
-            {/* 🔽 নিচের এই অংশটিতে আগে ভুল ছিল, এখন ঠিক করা হয়েছে */}
             {filteredData.length === 0 && (
               <tr>
-                <td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+                <td colSpan="7" className="px-4 py-8 text-center text-gray-400">
                   No entries found
                 </td>
               </tr>
