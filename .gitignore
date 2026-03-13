@@ -1,0 +1,36 @@
+# Next.js build output
+.next/
+out/
+
+
+# Dependencies
+node_modules
+
+
+# Environment files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+
+# TypeScript declaration file
+next-env.d.ts
+
+
+# Optional: VS Code settings
+.vscode/
+
+# Optional: npm package manager cache
+.npm/
+
+# Optional: Yarn lock file
+# Uncomment if you don't want to track your yarn.lock file
+# yarn.lock
+
+# Optional: pnpm lock file
+# pnpm-lock.yaml
+
+# Optional: miscellaneous
+.DS_Store
+*.tgz
+
